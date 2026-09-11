@@ -1,11 +1,29 @@
 name: Ballerina daily build
+run-name: "Ballerina daily build ${{ inputs.leg || github.event_name }} ${{ inputs.racecar_run }}"
 
 on:
   workflow_dispatch:
+    inputs:
+      leg:
+        description: "baseline (uninstrumented) or instrumented (under chalk/curiosity)"
+        type: choice
+        options: [instrumented, baseline]
+        default: baseline
+      profile:
+        description: "CrashOverride chalk profile"
+        type: string
+        default: curiosity-tests-racecar
+      racecar_run:
+        description: "racecar correlation token, echoed into the run name"
+        type: string
+        default: ""
   schedule:
     - cron:  '30 18 * * *'    # 00:00 in LK time (GMT+5:30)
     - cron:  '30 6 * * *'     # 12:00 in LK time (GMT+5:30)
 
+
+env:
+  CHALK_ON: ${{ inputs.leg == 'instrumented' }}
 jobs:
   ubuntu_build:
     name: Build with tests on Ubuntu
@@ -51,6 +69,7 @@ jobs:
           ./gradlew build -Pnative.test --max-workers=2 --scan --no-daemon 
 
       - name: Notify failure
+        continue-on-error: true   # racecar: scan/report/push step, must not fail the build
         if: ${{ failure() }}
         run: |
           curl \
@@ -79,6 +98,7 @@ jobs:
         run: git submodule update --init
 
       - name: Cache SonarCloud packages
+        continue-on-error: true   # racecar: scan/report/push step, must not fail the build
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
@@ -121,6 +141,7 @@ jobs:
           ./gradlew build sonarqube --info -x test -x check --max-workers=2 --scan --no-daemon
           
       - name: Print log message  
+        continue-on-error: true   # racecar: scan/report/push step, must not fail the build
         env: 
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         if: "${{ env.SONAR_TOKEN == '' }}"
