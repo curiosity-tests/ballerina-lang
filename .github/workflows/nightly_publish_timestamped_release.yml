@@ -1,8 +1,7 @@
 name: (Nightly) Publish Timestamped Snapshot Artifacts
 
 on:
-  schedule:
-    - cron: '30 18 * * *'    # 00:00 in LK time (GMT+5:30)
+  workflow_dispatch:
 
 jobs:
   publish-ballerina-lang:
